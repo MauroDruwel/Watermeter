@@ -68,18 +68,14 @@ class WaterMeterReader:
             logger.error(f"Error analyzing image with Gemini: {e}")
             return None
 
-    def send_to_home_assistant(self, reading, raw_response):
+    def send_to_home_assistant(self, reading):
         """Send the water meter reading to Home Assistant"""
         try:
-            url = f'{config.HOME_ASSISTANT_URL}/api/states/{config.WATER_METER_SENSOR}'
+            url = f'{config.HOME_ASSISTANT_URL}/api/services/input_number/set_value'
             
             data = {
-                'state': reading,
-                'attributes': {
-                    'unit_of_measurement': 'm³',
-                    'friendly_name': 'Water Meter Reading',
-                    'last_updated': datetime.now().isoformat()
-                }
+                'entity_id': config.WATER_METER_INPUT,
+                'value': reading
             }
             
             response = requests.post(url, json=data, headers=self.ha_headers, timeout=10)

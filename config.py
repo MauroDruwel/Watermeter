@@ -14,8 +14,8 @@ ESP32_CAM_URL = os.getenv('ESP32_CAM_URL', 'http://esp32-cam.local/capture')
 # Gemini API Configuration
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 
-# Home Assistant Sensor for Water Meter
-WATER_METER_SENSOR = os.getenv('WATER_METER_SENSOR', 'sensor.water_meter_reading')
+# Home Assistant Input Number for Water Meter
+WATER_METER_INPUT = os.getenv('WATER_METER_INPUT', 'input_number.water_meter_reading')
 
 # Schedule Configuration (in minutes)
 READING_INTERVAL_MINUTES = int(os.getenv('READING_INTERVAL_MINUTES', '60'))
