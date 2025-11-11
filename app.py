@@ -4,8 +4,6 @@ import logging
 from datetime import datetime
 from google import genai
 from google.genai import types
-from io import BytesIO
-from PIL import Image
 import config
 
 # Configure logging
@@ -25,7 +23,8 @@ class WaterMeterReader:
             'Authorization': f'Bearer {config.HOME_ASSISTANT_TOKEN}',
             'Content-Type': 'application/json'
         }
-        self.model = "gemini-2.5-flash"
+        self.model = "gemini-2.5-flash-preview-09-2025"
+        self.prompt = "Bekijk de foto van de watermeter heel zorgvuldig en vergroot waar nodig. De vier witte cijfers (wieltjes) geven het aantal kubieke meters (m³) — dat is het gehele getal vóór de komma. De vier rode wijzertjes geven de cijfers ná de komma (de decimale cijfers). Lees alle 8 cijfers exact en geef alleen de meterstand terug in één regel, zonder extra woorden of eenheid, in het format met een punt als decimaalscheiding: XXXX.YYYY (bijvoorbeeld 0123.4567). Als één of meer cijfers onleesbaar zijn of de foto onvoldoende kwaliteit heeft om de volledige acht cijfers betrouwbaar te bepalen, antwoord dan precies met: ERROR (uitroepende letters, zonder toelichting)."
 
     def control_switch(self, state: bool):
         """Turn the garage switch on or off"""
@@ -47,12 +46,10 @@ class WaterMeterReader:
         """Capture image from ESP32-CAM"""
         try:
             logger.info("Requesting image from ESP32-CAM...")
-            response = requests.get(config.ESP32_CAM_URL, timeout=15)
-            response.raise_for_status()
-            
-            # Convert to PIL Image
-            image = Image.open(BytesIO(response.content))
-            logger.info("Image captured successfully")
+            image_bytes = requests.get(config.ESP32_CAM_URL).content
+            image = types.Part.from_bytes(
+            data=image_bytes, mime_type="image/jpeg"
+            )
             return image
         except Exception as e:
             logger.error(f"Error capturing image: {e}")
@@ -61,59 +58,15 @@ class WaterMeterReader:
     def analyze_meter_with_gemini(self, image):
         """Send image to Gemini and extract water meter reading"""
         try:
-            logger.info("Analyzing image with Gemini...")
-            
-            prompt = """
-            Analyze this water meter image and extract the current reading.
-            
-            Please provide:
-            1. The numeric reading shown on the meter (e.g., 123.456 or 123456)
-            2. The unit if visible (m³, liters, etc.)
-            3. Your confidence level (high/medium/low)
-            
-            Format your response as:
-            Reading: [number]
-            Unit: [unit]
-            Confidence: [level]
-            
-            If you cannot read the meter clearly, explain why.
-            """
-            
             response = client.models.generate_content(
-                model=self.model, contents=[
-      prompt,
-      types.Part.from_bytes(
-        data=image,
-        mime_type='image/jpeg',
-      )
-    ]
+                model=self.model,
+                contents=[self.prompt, image],
             )
-            result = response.text
-            
-            logger.info(f"Gemini response: {result}")
-            
-            # Parse the reading from the response
-            reading = self.parse_reading(result)
-            return reading, result
+            return float(response.text)
             
         except Exception as e:
             logger.error(f"Error analyzing image with Gemini: {e}")
-            return None, str(e)
-
-    def parse_reading(self, gemini_response):
-        """Extract numeric reading from Gemini response"""
-        try:
-            lines = gemini_response.split('\n')
-            for line in lines:
-                if 'Reading:' in line:
-                    # Extract number from the line
-                    parts = line.split('Reading:')[1].strip()
-                    # Remove any non-numeric characters except decimal point
-                    reading = ''.join(c for c in parts.split()[0] if c.isdigit() or c == '.')
-                    return float(reading) if reading else None
-        except Exception as e:
-            logger.error(f"Error parsing reading: {e}")
-        return None
+            return None
 
     def send_to_home_assistant(self, reading, raw_response):
         """Send the water meter reading to Home Assistant"""
@@ -125,8 +78,7 @@ class WaterMeterReader:
                 'attributes': {
                     'unit_of_measurement': 'm³',
                     'friendly_name': 'Water Meter Reading',
-                    'last_updated': datetime.now().isoformat(),
-                    'gemini_response': raw_response[:500]  # Truncate if too long
+                    'last_updated': datetime.now().isoformat()
                 }
             }
             
@@ -164,16 +116,15 @@ class WaterMeterReader:
                 return
             
             # Step 4: Analyze with Gemini
-            reading, raw_response = self.analyze_meter_with_gemini(image)
+            reading = self.analyze_meter_with_gemini(image)
             
             if reading is None:
                 logger.warning("Could not extract reading from image")
-                logger.info(f"Raw Gemini response: {raw_response}")
                 return
             
             # Step 5: Send to Home Assistant
-            self.send_to_home_assistant(reading, raw_response)
-            
+            self.send_to_home_assistant(reading)
+
             logger.info(f"Water meter reading complete: {reading}")
             
         except Exception as e:
