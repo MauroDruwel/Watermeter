@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  watermeter-reader:
+    build: .
+    container_name: watermeter-reader
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - TZ=Europe/Brussels
