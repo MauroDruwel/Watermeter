@@ -14,17 +14,13 @@ This project automatically reads your analog water meter using:
 
 ```
 .
-├── docker/                 # Python service running in Docker
-│   ├── app.py             # Main application logic
-│   ├── config.py          # Configuration management
-│   ├── Dockerfile         # Docker image definition
-│   ├── docker-compose.yml # Docker Compose configuration
-│   ├── requirements.txt   # Python dependencies
-│   └── README.md          # Docker setup instructions
-│
-└── esp32-cam/             # ESP32-CAM firmware
-    ├── watermeter_cam.ino # Arduino sketch
-    └── README.md          # ESP32-CAM setup instructions
+├── app.py                 # Main application logic
+├── config.py              # Configuration management
+├── Dockerfile             # Docker image definition
+├── docker-compose.yml     # Docker Compose configuration
+├── requirements.txt       # Python dependencies
+├── test.py                # Testing script
+└── .env.example           # Environment variables template
 ```
 
 ## 🚀 How It Works
@@ -34,55 +30,83 @@ This project automatically reads your analog water meter using:
 3. **Image Capture**: Requests image from ESP32-CAM
 4. **Light Off**: Turns off the garage light
 5. **AI Analysis**: Sends image to Google Gemini for meter reading extraction
-6. **Data Storage**: Sends reading to Home Assistant as a sensor
+6. **Data Storage**: Updates `input_number.water_meter_reading` in Home Assistant
 
 ## 🛠️ Quick Start
 
 ### 1. Set up ESP32-CAM
 
-See detailed instructions in [`esp32-cam/README.md`](./esp32-cam/README.md)
+**Flash the CameraWebServer Example**
 
-- Flash the Arduino sketch to your ESP32-CAM
-- Configure WiFi credentials
-- Mount camera with clear view of water meter
-- Note the IP address
+1. Install Arduino IDE and ESP32 board support
+2. Use the official ESP32 CameraWebServer example:
+   - GitHub: [ESP32 CameraWebServer](https://github.com/espressif/arduino-esp32/tree/master/libraries/ESP32/examples/Camera/CameraWebServer)
+   - In Arduino IDE: `File` → `Examples` → `ESP32` → `Camera` → `CameraWebServer`
 
-### 2. Set up Docker Service
+3. Configure the sketch:
+   - Set your WiFi credentials (`ssid` and `password`)
+   - Select your ESP32-CAM board model
+   - Upload to your ESP32-CAM
 
-See detailed instructions in [`docker/README.md`](./docker/README.md)
+4. After upload:
+   - Open Serial Monitor (115200 baud)
+   - Note the IP address displayed
+   - Test by visiting `http://<ESP32-IP>/capture` in your browser
+
+5. Mount the camera with a clear view of your water meter
+
+### 2. Set up Home Assistant
+
+Create an input number helper for storing the water meter reading:
+
+1. Go to **Settings** → **Devices & Services** → **Helpers**
+2. Click **Create Helper** → **Number**
+3. Configure:
+   - **Name**: Water Meter Reading
+   - **Entity ID**: `input_number.water_meter_reading`
+   - **Minimum**: 0
+   - **Maximum**: 10000
+
+### 3. Set up Docker Service
 
 1. Copy environment file:
    ```bash
-   cd docker
    cp .env.example .env
    ```
 
 2. Edit `.env` with your configuration:
-   - Home Assistant URL and token
-   - ESP32-CAM IP address
-   - Google Gemini API key
-   - Reading interval
+   - `HOME_ASSISTANT_URL`: Your Home Assistant URL
+   - `HOME_ASSISTANT_TOKEN`: Long-lived access token
+   - `ESP32_CAM_URL`: Your ESP32-CAM capture URL (e.g., `http://192.168.1.127/capture`)
+   - `SWITCH_ENTITY_ID`: Entity ID of your light/switch for illumination
+   - `WATER_METER_INPUT`: `input_number.water_meter_reading`
+   - `GEMINI_API_KEY`: Your Google Gemini API key
+   - `READING_INTERVAL_MINUTES`: How often to read (default: 60)
 
 3. Start the service:
    ```bash
    docker-compose up -d
    ```
 
+4. Check logs:
+   ```bash
+   docker-compose logs -f
+   ```
+
 ## 📋 Prerequisites
 
 - **Hardware**:
   - ESP32-CAM module
-  - USB-to-Serial adapter (for programming)
   - 5V power supply for ESP32-CAM
-  - Smart light in Home Assistant (for illumination)
+  - Smart light or switch in Home Assistant (for illumination)
 
 - **Software**:
   - Docker and Docker Compose
-  - Home Assistant instance
-  - Google Gemini API key (free tier available)
-  - Arduino IDE (for ESP32-CAM setup)
+  - Home Assistant instance with API access
+  - Google Gemini API key (free tier available at [Google AI Studio](https://makersuite.google.com/app/apikey))
+  - Arduino IDE with ESP32 board support (for ESP32-CAM setup)
 
-## � API Keys & Tokens
+## 🔑 API Keys & Tokens
 
 ### Home Assistant Long-Lived Access Token
 
@@ -97,45 +121,25 @@ See detailed instructions in [`docker/README.md`](./docker/README.md)
 2. Create an API key
 3. Copy and save in `.env`
 
-## 📊 Home Assistant Integration
-
-The service creates a sensor entity (default: `sensor.water_meter_reading`) that you can:
-- Add to dashboards
-- Use in automations
-- Track historical usage
-- Set up alerts
-
-Example dashboard card:
-```yaml
-type: sensor
-entity: sensor.water_meter_reading
-name: Water Meter
-icon: mdi:water
-graph: line
-```
-
 ## 🔧 Configuration
 
-Key settings in `docker/.env`:
+Key settings in `.env`:
 
-- `READING_INTERVAL_MINUTES`: How often to read (default: 60)
-- `LIGHT_ON_DELAY`: Seconds to wait after light on (default: 2)
-- `LIGHT_ENTITY_ID`: Your garage light entity ID
-- `WATER_METER_SENSOR`: Sensor name in Home Assistant
+- `HOME_ASSISTANT_URL`: Your Home Assistant URL (e.g., `http://192.168.1.148:8123`)
+- `HOME_ASSISTANT_TOKEN`: Long-lived access token from Home Assistant
+- `SWITCH_ENTITY_ID`: Entity ID of light/switch for illumination (e.g., `switch.garage_lamp`)
+- `ESP32_CAM_URL`: ESP32-CAM capture endpoint (e.g., `http://192.168.1.127/capture`)
+- `GEMINI_API_KEY`: Your Google Gemini API key
+- `WATER_METER_INPUT`: Input number entity ID (default: `input_number.water_meter_reading`)
+- `READING_INTERVAL_MINUTES`: How often to read the meter (default: 60)
+- `SWITCH_ON_DELAY`: Seconds to wait after turning on light (default: 2)
 
 ## 📝 Logs
 
 View logs from the Docker service:
 ```bash
-cd docker
 docker-compose logs -f
 ```
-
-## 🐛 Troubleshooting
-
-Common issues and solutions are documented in:
-- [`docker/README.md`](./docker/README.md#troubleshooting)
-- [`esp32-cam/README.md`](./esp32-cam/README.md#troubleshooting)
 
 ## 🤝 Contributing
 
@@ -148,20 +152,6 @@ Contributions are welcome! Feel free to:
 
 See [LICENSE](./LICENSE) file for details.
 
-## 🙏 Acknowledgments
 
-- ESP32-CAM community
-- Google Gemini AI
-- Home Assistant project
-- Open source contributors
-
-## � Support
-
-If you encounter issues:
-1. Check the README files in each folder
-2. Review the logs
-3. Open an issue on GitHub
-
----
 
 **Made with ❤️ for smart home automation**
