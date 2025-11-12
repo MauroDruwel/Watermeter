@@ -42,9 +42,45 @@ class WaterMeterReader:
             logger.error(f"Error controlling switch: {e}")
             return False
 
+    def configure_camera(self):
+        """Configure camera settings before capture"""
+        try:
+            # Extract base URL from ESP32_CAM_URL (remove /capture endpoint)
+            base_url = config.ESP32_CAM_URL.replace('/capture', '')
+            
+            # Camera settings to apply
+            settings = [
+                ('framesize', '15'),      # Set frame size (15 = UXGA 1600x1200)
+                ('quality', '4'),         # Set JPEG quality (lower = better quality)
+                ('hmirror', '1'),         # Horizontal mirror
+                ('vflip', '1'),           # Vertical flip
+                ('led_intensity', '255')  # LED at maximum brightness
+            ]
+            
+            logger.info("Configuring camera settings...")
+            for var, val in settings:
+                url = f"{base_url}/control?var={var}&val={val}"
+                response = requests.get(url, timeout=5)
+                response.raise_for_status()
+                logger.info(f"Set {var}={val}")
+                time.sleep(0.1)  # Small delay between settings
+            
+            # Wait a bit for settings to take effect
+            time.sleep(0.5)
+            logger.info("Camera configured successfully")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error configuring camera: {e}")
+            return False
+
     def capture_image(self):
         """Capture image from ESP32-CAM"""
         try:
+            # Configure camera settings first
+            if not self.configure_camera():
+                logger.warning("Failed to configure camera, proceeding with capture anyway...")
+            
             logger.info("Requesting image from ESP32-CAM...")
             image_bytes = requests.get(config.ESP32_CAM_URL).content
             image = types.Part.from_bytes(
@@ -94,9 +130,9 @@ class WaterMeterReader:
         
         try:
             # Step 1: Turn on the switch
-            if not self.control_switch(True):
-                logger.error("Failed to turn on switch, aborting")
-                return
+            #if not self.control_switch(True):
+            #    logger.error("Failed to turn on switch, aborting")
+            #    return
             
             # Wait for light to stabilize
             time.sleep(config.SWITCH_ON_DELAY)
@@ -105,7 +141,7 @@ class WaterMeterReader:
             image = self.capture_image()
             
             # Step 3: Turn off the switch
-            self.control_switch(False)
+            #self.control_switch(False)
             
             if image is None:
                 logger.error("Failed to capture image")
@@ -126,10 +162,10 @@ class WaterMeterReader:
         except Exception as e:
             logger.error(f"Error in read_meter: {e}")
             # Make sure switch is turned off even if there's an error
-            try:
-                self.control_switch(False)
-            except:
-                pass
+            #try:
+            #    self.control_switch(False)
+            #except:
+            #    pass
 
 
 def main():
