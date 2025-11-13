@@ -6,7 +6,6 @@ load_dotenv()
 # Home Assistant Configuration
 HOME_ASSISTANT_URL = os.getenv('HOME_ASSISTANT_URL', 'http://localhost:8123')
 HOME_ASSISTANT_TOKEN = os.getenv('HOME_ASSISTANT_TOKEN')
-SWITCH_ENTITY_ID = os.getenv('SWITCH_ENTITY_ID', 'switch.garage_lamp')
 
 # ESP32-CAM Configuration
 ESP32_CAM_URL = os.getenv('ESP32_CAM_URL', 'http://esp32-cam.local/capture')
@@ -20,5 +19,7 @@ WATER_METER_INPUT = os.getenv('WATER_METER_INPUT', 'input_number.water_meter_rea
 # Schedule Configuration (in minutes)
 READING_INTERVAL_MINUTES = int(os.getenv('READING_INTERVAL_MINUTES', '60'))
 
-# Switch timing (in seconds)
-SWITCH_ON_DELAY = int(os.getenv('SWITCH_ON_DELAY', '2'))
+# Active Hours Configuration (24-hour format)
+# Readings will only be taken between these hours
+ACTIVE_HOURS_START = int(os.getenv('ACTIVE_HOURS_START', '6'))   # Default: 6:00 AM
+ACTIVE_HOURS_END = int(os.getenv('ACTIVE_HOURS_END', '23'))      # Default: 11:00 PM

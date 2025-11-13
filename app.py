@@ -26,21 +26,23 @@ class WaterMeterReader:
         self.model = "gemini-2.5-flash-preview-09-2025"
         self.prompt = "Bekijk de foto van de watermeter heel zorgvuldig en vergroot waar nodig. De vier witte cijfers (wieltjes) geven het aantal kubieke meters (m³) — dat is het gehele getal vóór de komma. De vier rode wijzertjes geven de cijfers ná de komma (de decimale cijfers). Lees alle 8 cijfers exact en geef alleen de meterstand terug in één regel, zonder extra woorden of eenheid, in het format met een punt als decimaalscheiding: XXXX.YYYY (bijvoorbeeld 0123.4567). Als één of meer cijfers onleesbaar zijn of de foto onvoldoende kwaliteit heeft om de volledige acht cijfers betrouwbaar te bepalen, antwoord dan precies met: ERROR (uitroepende letters, met toelichting), tenzij het enkel over het laatste cijfer gaat, deze is minder belangrijk, dus probeer dan in te schatten wat het getal zou zijn."
 
-    def control_switch(self, state: bool):
-        """Turn the garage switch on or off"""
-        try:
-            service = 'turn_on' if state else 'turn_off'
-            url = f'{config.HOME_ASSISTANT_URL}/api/services/switch/{service}'
-            data = {'entity_id': config.SWITCH_ENTITY_ID}
-            
-            response = requests.post(url, json=data, headers=self.ha_headers, timeout=10)
-            response.raise_for_status()
-            
-            logger.info(f"Switch {'turned on' if state else 'turned off'} successfully")
-            return True
-        except Exception as e:
-            logger.error(f"Error controlling switch: {e}")
-            return False
+    def is_within_active_hours(self):
+        """Check if current time is within active hours"""
+        now = datetime.now()
+        current_hour = now.hour
+        
+        start_hour = config.ACTIVE_HOURS_START
+        end_hour = config.ACTIVE_HOURS_END
+        
+        if start_hour <= end_hour:
+            # Normal case: e.g., 6:00 to 23:00
+            is_active = start_hour <= current_hour < end_hour
+        else:
+            # Overnight case: e.g., 22:00 to 6:00
+            is_active = current_hour >= start_hour or current_hour < end_hour
+        
+        logger.info(f"Current hour: {current_hour:02d}:00, Active hours: {start_hour:02d}:00-{end_hour:02d}:00, Active: {is_active}")
+        return is_active
 
     def configure_camera(self):
         """Configure camera settings before capture"""
@@ -54,7 +56,7 @@ class WaterMeterReader:
                 ('quality', '4'),         # Set JPEG quality (lower = better quality)
                 ('hmirror', '1'),         # Horizontal mirror
                 ('vflip', '1'),           # Vertical flip
-                ('led_intensity', '255')  # LED at maximum brightness
+                ('led_intensity', '35')   # LED intensity
             ]
             
             logger.info("Configuring camera settings...")
@@ -128,44 +130,33 @@ class WaterMeterReader:
         logger.info("=" * 50)
         logger.info(f"Starting water meter reading at {datetime.now()}")
         
+        # Check if we're within active hours
+        if not self.is_within_active_hours():
+            logger.info("Outside of active hours, skipping reading")
+            return
+        
         try:
-            # Step 1: Turn on the switch
-            #if not self.control_switch(True):
-            #    logger.error("Failed to turn on switch, aborting")
-            #    return
-            
-            # Wait for light to stabilize
-            # time.sleep(config.SWITCH_ON_DELAY)
-            
-            # Step 2: Capture image
+            # Step 1: Capture image
             image = self.capture_image()
-            
-            # Step 3: Turn off the switch
-            #self.control_switch(False)
             
             if image is None:
                 logger.error("Failed to capture image")
                 return
             
-            # Step 4: Analyze with Gemini
+            # Step 2: Analyze with Gemini
             reading = self.analyze_meter_with_gemini(image)
             
             if reading is None:
                 logger.warning("Could not extract reading from image")
                 return
             
-            # Step 5: Send to Home Assistant
+            # Step 3: Send to Home Assistant
             self.send_to_home_assistant(reading)
 
             logger.info(f"Water meter reading complete: {reading}")
             
         except Exception as e:
             logger.error(f"Error in read_meter: {e}")
-            # Make sure switch is turned off even if there's an error
-            #try:
-            #    self.control_switch(False)
-            #except:
-            #    pass
 
 
 def main():
