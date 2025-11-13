@@ -106,6 +106,44 @@ class WaterMeterReader:
             logger.error(f"Error analyzing image with Gemini: {e}")
             return None
 
+    def get_current_reading_from_ha(self):
+        """Get the current water meter reading from Home Assistant"""
+        try:
+            url = f'{config.HOME_ASSISTANT_URL}/api/states/{config.WATER_METER_INPUT}'
+            
+            response = requests.get(url, headers=self.ha_headers, timeout=10)
+            response.raise_for_status()
+            
+            current_value = float(response.json()['state'])
+            logger.info(f"Current reading from Home Assistant: {current_value}")
+            return current_value
+            
+        except Exception as e:
+            logger.error(f"Error getting current reading from Home Assistant: {e}")
+            return None
+
+    def validate_reading(self, new_reading, old_reading):
+        """Validate the new reading against the old reading"""
+        if old_reading is None:
+            logger.warning("No previous reading available, skipping validation")
+            return True
+        
+        # Check if new reading is lower than old reading
+        if new_reading < old_reading:
+            logger.error(f"Invalid reading: New reading ({new_reading}) is lower than old reading ({old_reading})")
+            return False
+        
+        # Check if difference is too large
+        difference = new_reading - old_reading
+        max_difference = config.MAX_READING_DIFFERENCE
+        
+        if difference > max_difference:
+            logger.error(f"Invalid reading: Difference ({difference:.4f}) exceeds maximum allowed ({max_difference})")
+            return False
+        
+        logger.info(f"Reading validated: {old_reading} -> {new_reading} (difference: {difference:.4f})")
+        return True
+
     def send_to_home_assistant(self, reading):
         """Send the water meter reading to Home Assistant"""
         try:
@@ -136,24 +174,32 @@ class WaterMeterReader:
             return
         
         try:
-            # Step 1: Capture image
+            # Step 1: Get current reading from Home Assistant
+            old_reading = self.get_current_reading_from_ha()
+            
+            # Step 2: Capture image
             image = self.capture_image()
             
             if image is None:
                 logger.error("Failed to capture image")
                 return
             
-            # Step 2: Analyze with Gemini
-            reading = self.analyze_meter_with_gemini(image)
+            # Step 3: Analyze with Gemini
+            new_reading = self.analyze_meter_with_gemini(image)
             
-            if reading is None:
+            if new_reading is None:
                 logger.warning("Could not extract reading from image")
                 return
             
-            # Step 3: Send to Home Assistant
-            self.send_to_home_assistant(reading)
+            # Step 4: Validate the new reading
+            if not self.validate_reading(new_reading, old_reading):
+                logger.error("Reading validation failed, not sending to Home Assistant")
+                return
+            
+            # Step 5: Send to Home Assistant
+            self.send_to_home_assistant(new_reading)
 
-            logger.info(f"Water meter reading complete: {reading}")
+            logger.info(f"Water meter reading complete: {new_reading}")
             
         except Exception as e:
             logger.error(f"Error in read_meter: {e}")

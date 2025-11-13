@@ -23,3 +23,8 @@ READING_INTERVAL_MINUTES = int(os.getenv('READING_INTERVAL_MINUTES', '60'))
 # Readings will only be taken between these hours
 ACTIVE_HOURS_START = int(os.getenv('ACTIVE_HOURS_START', '6'))   # Default: 6:00 AM
 ACTIVE_HOURS_END = int(os.getenv('ACTIVE_HOURS_END', '23'))      # Default: 11:00 PM
+
+# Safety Configuration
+# Maximum allowed difference between readings (in cubic meters)
+# This prevents accepting readings that are unrealistically high
+MAX_READING_DIFFERENCE = float(os.getenv('MAX_READING_DIFFERENCE', '1000'))
