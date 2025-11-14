@@ -62,9 +62,13 @@ class WaterMeterReader:
             logger.info("Configuring camera settings...")
             for var, val in settings:
                 url = f"{base_url}/control?var={var}&val={val}"
-                response = requests.get(url, timeout=5)
-                response.raise_for_status()
-                logger.info(f"Set {var}={val}")
+                try:
+                    response = requests.get(url, timeout=10)
+                    response.raise_for_status()
+                    logger.info(f"Set {var}={val}")
+                except Exception as e:
+                    logger.error(f"Failed to set {var}={val}: {e}")
+                    raise Exception(f"Camera configuration failed at {var}={val}")
                 time.sleep(0.1)  # Small delay between settings
             
             # Wait a bit for settings to take effect
@@ -81,10 +85,11 @@ class WaterMeterReader:
         try:
             # Configure camera settings first
             if not self.configure_camera():
-                logger.warning("Failed to configure camera, proceeding with capture anyway...")
+                logger.error("Failed to configure camera, aborting capture")
+                return None
             
             logger.info("Requesting image from ESP32-CAM...")
-            image_bytes = requests.get(config.ESP32_CAM_URL).content
+            image_bytes = requests.get(config.ESP32_CAM_URL, timeout=15).content
             image = types.Part.from_bytes(
             data=image_bytes, mime_type="image/jpeg"
             )
