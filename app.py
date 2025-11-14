@@ -69,10 +69,10 @@ class WaterMeterReader:
                 except Exception as e:
                     logger.error(f"Failed to set {var}={val}: {e}")
                     raise Exception(f"Camera configuration failed at {var}={val}")
-                time.sleep(0.1)  # Small delay between settings
+                time.sleep(1.0)  # Wait 1 second between settings
             
             # Wait a bit for settings to take effect
-            time.sleep(0.5)
+            time.sleep(1.0)
             logger.info("Camera configured successfully")
             return True
             
