@@ -1,14 +1,45 @@
-# Water Meter Reader
+# 💧 Water Meter Reader - The "I just want to know my usage" Edition 🚀
 
-Automated water meter reading system using ESP32-CAM, Google Gemini AI, and Home Assistant integration.
+Welcome to my water meter reading project! This isn't just another AI wrapper, it's a journey of trial, error, and blinking LEDs. 😅
 
-## 🎯 Overview
+## � Inspiration & Why I Built This
 
-This project automatically reads your analog water meter using:
-- **ESP32-CAM** for capturing images of the meter
-- **Google Gemini AI** for intelligent meter reading extraction
-- **Home Assistant** for light control and data storage
-- **Docker** for easy deployment
+There's already an amazing project out there called [AI-on-the-edge-device](https://github.com/jomjol/AI-on-the-edge-device). It's super powerful, but it felt a bit heavy for what I needed. It requires specific hardware and a lot of manual setup (like selecting the specific dials on the image).
+
+I thought, *"With today's modern AI, surely we can just throw a picture at an LLM and have it figure it out, right?"* 🤔
+So, I decided to build my own version—simpler, less configuration, and powered by the latest AI models.
+
+##  The Story (or "Why did I do this?")
+
+So, here's the tea ☕. I started this because I wanted to automate reading my water meter. My electricity meter is already digital and smart, but my water meter? Still stuck in the analog stone age (and probably will be for a while). 🦕
+
+My first big brain idea 🧠 was to just turn on the garage lights to see the meter. I hooked it up to Home Assistant (because why not? 😎), but imagine having your garage lights flickering on and off in the middle of the night just to check how much water you used... yeah, spooky and not ideal. 👻
+
+Next attempt: A simple LED. Result? A blinding beam of light and reflections everywhere. The camera couldn't see a thing! 🕶️
+
+**The Solution:**
+I ended up modifying the `CameraWebServer` source code to support a **WS2812B LED ring**. Now we get nice, even lighting without the disco ball effect. ✨
+(Check out the `CameraWebServer` folder in this repo for the modified code!)
+
+[Link to video coming soon!]
+
+## 🤖 The AI Magic
+
+I spent *way* too much time testing different Gemini models.
+After battling with hallucinations and bad reads, I settled on **`gemini-2.5-flash-preview-09-2025`**.
+Right now, it's the king 👑 of reading these analog dials, with it also being completely free. But hey, AI moves fast, so this might change next week.
+
+I also tweaked the prompts until they were just right. It's not perfect, but it works like a charm for me!
+
+## 🛠️ How it actually works
+
+1.  **Wakey Wakey**: The script runs every X minutes.
+2.  **Sanity Check**: It grabs the *previous* reading from Home Assistant. This helps us spot bad readings (because water meters don't run backwards... usually). 🕵️‍♂️
+3.  **Lights On**: It fires up the WS2812B LED ring (via the ESP32).
+4.  **Say Cheese 📸**: Snaps a pic of the meter.
+5.  **Lights Off**: Saves energy (and my eyes).
+6.  **AI Brain**: Sends the pic to Google Gemini to figure out the numbers.
+7.  **Home Assistant**: Dumps the data into HA so I can make pretty graphs. 📈
 
 ## 📁 Project Structure
 
@@ -20,138 +51,44 @@ This project automatically reads your analog water meter using:
 ├── docker-compose.yml     # Docker Compose configuration
 ├── requirements.txt       # Python dependencies
 ├── test.py                # Testing script
+├── CameraWebServer/       # Modified ESP32 code with WS2812B support
 └── .env.example           # Environment variables template
 ```
 
-## 🚀 How It Works
+## 🚀 Getting Started (The Boring but Necessary Stuff)
 
-1. **Scheduled Reading**: Python service runs every X minutes (configurable)
-2. **Light Control**: Turns on garage light via Home Assistant API
-3. **Image Capture**: Requests image from ESP32-CAM
-4. **Light Off**: Turns off the garage light
-5. **AI Analysis**: Sends image to Google Gemini for meter reading extraction
-6. **Data Storage**: Updates `input_number.water_meter_reading` in Home Assistant
+### 1. The Hardware (ESP32-CAM + Bling)
 
-## 🛠️ Quick Start
+You'll need an ESP32-CAM and a WS2812B LED ring.
+Instead of the stock example, use the code in the `CameraWebServer` folder in this repo. It's got the special sauce for the LEDs. 🍝
 
-### 1. Set up ESP32-CAM
+1.  Open `CameraWebServer/CameraWebServer.ino` in Arduino IDE.
+2.  Update your WiFi creds.
+3.  Flash it!
+4.  Hook up your LED ring (check the code for pins).
 
-**Flash the CameraWebServer Example**
+### 2. Home Assistant Setup
 
-1. Install Arduino IDE and ESP32 board support
-2. Use the official ESP32 CameraWebServer example:
-   - GitHub: [ESP32 CameraWebServer](https://github.com/espressif/arduino-esp32/tree/master/libraries/ESP32/examples/Camera/CameraWebServer)
-   - In Arduino IDE: `File` → `Examples` → `ESP32` → `Camera` → `CameraWebServer`
+Create a helper so we have somewhere to put the numbers.
+**Settings** → **Devices & Services** → **Helpers** → **Create Helper** → **Number**.
+Call it `input_number.water_meter_reading`.
 
-3. Configure the sketch:
-   - Set your WiFi credentials (`ssid` and `password`)
-   - Select your ESP32-CAM board model
-   - Upload to your ESP32-CAM
+### 3. Docker (Because we love containers 🐳)
 
-4. After upload:
-   - Open Serial Monitor (115200 baud)
-   - Note the IP address displayed
-   - Test by visiting `http://<ESP32-IP>/capture` in your browser
+1.  Copy the env file: `cp .env.example .env`
+2.  Fill in the blanks (API keys, URLs, etc.).
+3.  `docker-compose up -d`
+4.  Sit back and watch the magic happen.
 
-5. Mount the camera with a clear view of your water meter
+## � Config Stuff
 
-### 2. Set up Home Assistant
-
-Create an input number helper for storing the water meter reading:
-
-1. Go to **Settings** → **Devices & Services** → **Helpers**
-2. Click **Create Helper** → **Number**
-3. Configure:
-   - **Name**: Water Meter Reading
-   - **Entity ID**: `input_number.water_meter_reading`
-   - **Minimum**: 0
-   - **Maximum**: 10000
-
-### 3. Set up Docker Service
-
-1. Copy environment file:
-   ```bash
-   cp .env.example .env
-   ```
-
-2. Edit `.env` with your configuration:
-   - `HOME_ASSISTANT_URL`: Your Home Assistant URL
-   - `HOME_ASSISTANT_TOKEN`: Long-lived access token
-   - `ESP32_CAM_URL`: Your ESP32-CAM capture URL (e.g., `http://192.168.1.127/capture`)
-   - `SWITCH_ENTITY_ID`: Entity ID of your light/switch for illumination
-   - `WATER_METER_INPUT`: `input_number.water_meter_reading`
-   - `GEMINI_API_KEY`: Your Google Gemini API key
-   - `READING_INTERVAL_MINUTES`: How often to read (default: 60)
-
-3. Start the service:
-   ```bash
-   docker-compose up -d
-   ```
-
-4. Check logs:
-   ```bash
-   docker-compose logs -f
-   ```
-
-## 📋 Prerequisites
-
-- **Hardware**:
-  - ESP32-CAM module
-  - 5V power supply for ESP32-CAM
-  - Smart light or switch in Home Assistant (for illumination)
-
-- **Software**:
-  - Docker and Docker Compose
-  - Home Assistant instance with API access
-  - Google Gemini API key (free tier available at [Google AI Studio](https://makersuite.google.com/app/apikey))
-  - Arduino IDE with ESP32 board support (for ESP32-CAM setup)
-
-## 🔑 API Keys & Tokens
-
-### Home Assistant Long-Lived Access Token
-
-1. Go to your Home Assistant profile
-2. Scroll to "Long-Lived Access Tokens"
-3. Create a token named "Water Meter Reader"
-4. Copy and save in `.env`
-
-### Google Gemini API Key
-
-1. Visit [Google AI Studio](https://makersuite.google.com/app/apikey)
-2. Create an API key
-3. Copy and save in `.env`
-
-## 🔧 Configuration
-
-Key settings in `.env`:
-
-- `HOME_ASSISTANT_URL`: Your Home Assistant URL (e.g., `http://192.168.1.148:8123`)
-- `HOME_ASSISTANT_TOKEN`: Long-lived access token from Home Assistant
-- `SWITCH_ENTITY_ID`: Entity ID of light/switch for illumination (e.g., `switch.garage_lamp`)
-- `ESP32_CAM_URL`: ESP32-CAM capture endpoint (e.g., `http://192.168.1.127/capture`)
-- `GEMINI_API_KEY`: Your Google Gemini API key
-- `WATER_METER_INPUT`: Input number entity ID (default: `input_number.water_meter_reading`)
-- `READING_INTERVAL_MINUTES`: How often to read the meter (default: 60)
-- `SWITCH_ON_DELAY`: Seconds to wait after turning on light (default: 2)
-
-## 📝 Logs
-
-View logs from the Docker service:
-```bash
-docker-compose logs -f
-```
+Check `.env` for the knobs and dials you can turn.
+*   `GEMINI_API_KEY`: Get this from Google. It's free (mostly).
+*   `READING_INTERVAL_MINUTES`: How obsessed are you with your water usage?
 
 ## 🤝 Contributing
 
-Contributions are welcome! Feel free to:
-- Report bugs
-- Suggest features
-- Submit pull requests
+Got a better prompt? Found a cooler model? PRs are welcome! Let's make this thing even better.
 
-## 📄 License
-
-See [LICENSE](./LICENSE) file for details.
-
-
-
-**Made with ❤️ for smart home automation**
+---
+*Made with ❤️, milk, and a lot of trial and error.*
