@@ -1,7 +1,7 @@
 
 
 <p align="center">
-	<img src="https://raw.githubusercontent.com/MauroDruwel/Watermeter/main/.github/home-assistant-screenshot.png" alt="Home Assistant Screenshot" width="600"/>
+	<img src="https://github.com/user-attachments/assets/c2290ed6-b191-4e1f-bdda-15a3271cc36f" alt="Home Assistant Screenshot" width="600" />
 </p>
 
 <h1 align="center">💧 Water Meter Reader</h1>
