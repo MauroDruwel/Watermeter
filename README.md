@@ -1,45 +1,77 @@
-# 💧 Water Meter Reader - The "I just want to know my usage" Edition 🚀
 
-Welcome to my water meter reading project! This isn't just another AI wrapper, it's a journey of trial, error, and blinking LEDs. 😅
 
-## � Inspiration & Why I Built This
+<p align="center">
+	<img src="https://raw.githubusercontent.com/MauroDruwel/Watermeter/main/.github/home-assistant-screenshot.png" alt="Home Assistant Screenshot" width="600"/>
+</p>
 
-There's already an amazing project out there called [AI-on-the-edge-device](https://github.com/jomjol/AI-on-the-edge-device). It's super powerful, but it felt a bit heavy for what I needed. It requires specific hardware and a lot of manual setup (like selecting the specific dials on the image).
+<h1 align="center">💧 Water Meter Reader</h1>
+<p align="center"><b>"I just want to know my usage" Edition 🚀</b></p>
 
-I thought, *"With today's modern AI, surely we can just throw a picture at an LLM and have it figure it out, right?"* 🤔
-So, I decided to build my own version—simpler, less configuration, and powered by the latest AI models.
+<p align="center">
+	<a href="#quickstart">Quickstart</a> |
+	<a href="#getting-started">Getting Started</a> |
+	<a href="#project-structure">Project Structure</a> |
+	<a href="#contributing">Contributing</a>
+</p>
 
-##  The Story (or "Why did I do this?")
+---
 
-So, here's the tea ☕. I started this because I wanted to automate reading my water meter. My electricity meter is already digital and smart, but my water meter? Still stuck in the analog stone age (and probably will be for a while). 🦕
+> **Simple, modern, and AI-powered water meter reading for Home Assistant.**
 
-My first big brain idea 🧠 was to just turn on the garage lights to see the meter. I hooked it up to Home Assistant (because why not? 😎), but imagine having your garage lights flickering on and off in the middle of the night just to check how much water you used... yeah, spooky and not ideal. 👻
+---
 
-Next attempt: A simple LED. Result? A blinding beam of light and reflections everywhere. The camera couldn't see a thing! 🕶️
 
-**The Solution:**
-I ended up modifying the `CameraWebServer` source code to support a **WS2812B LED ring**. Now we get nice, even lighting without the disco ball effect. ✨
-(Check out the `CameraWebServer` folder in this repo for the modified code!)
+## 📦 Quick Install
 
-[Link to video coming soon!]
+```sh
+git clone https://github.com/MauroDruwel/Watermeter.git
+cd Watermeter
+copy .env.example .env  # On Windows, use 'copy', on Linux/Mac use 'cp'
+# Fill in your .env with your API keys and config
+docker-compose up -d
+```
 
-## 🤖 The AI Magic
+1. Flash your ESP32-CAM with the code in `CameraWebServer/` (see below)
+2. Create a Home Assistant helper: `input_number.water_meter_reading`
+3. Enjoy automatic water meter readings in Home Assistant! 💦
 
-I spent *way* too much time testing different Gemini models.
-After battling with hallucinations and bad reads, I settled on **`gemini-2.5-flash-preview-09-2025`**.
-Right now, it's the king 👑 of reading these analog dials, with it also being completely free. But hey, AI moves fast, so this might change next week.
+---
 
-I also tweaked the prompts until they were just right. It's not perfect, but it works like a charm for me!
+## Links
 
-## 🛠️ How it actually works
+- [Documentation](#getting-started)
+- [Contributing](#contributing)
+- [AI-on-the-edge-device (Inspiration)](https://github.com/jomjol/AI-on-the-edge-device)
 
-1.  **Wakey Wakey**: The script runs every X minutes.
-2.  **Sanity Check**: It grabs the *previous* reading from Home Assistant. This helps us spot bad readings (because water meters don't run backwards... usually). 🕵️‍♂️
-3.  **Lights On**: It fires up the WS2812B LED ring (via the ESP32).
-4.  **Say Cheese 📸**: Snaps a pic of the meter.
-5.  **Lights Off**: Saves energy (and my eyes).
-6.  **AI Brain**: Sends the pic to Google Gemini to figure out the numbers.
-7.  **Home Assistant**: Dumps the data into HA so I can make pretty graphs. 📈
+---
+
+
+## 🛠️ Getting Started
+
+### 1. The Hardware (ESP32-CAM + Bling)
+
+You'll need an ESP32-CAM and a WS2812B LED ring. Instead of the stock example, use the code in the `CameraWebServer` folder in this repo. It's got the special sauce for the LEDs. 🍝
+
+1. Open `CameraWebServer/CameraWebServer.ino` in Arduino IDE.
+2. Update your WiFi creds.
+3. Flash it!
+4. Hook up your LED ring (check the code for pins).
+
+### 2. Home Assistant Setup
+
+Create a helper so we have somewhere to put the numbers.
+**Settings** → **Devices & Services** → **Helpers** → **Create Helper** → **Number**.
+Call it `input_number.water_meter_reading`.
+
+### 3. Docker (Because we love containers 🐳)
+
+1. Copy the env file: `copy .env.example .env`
+2. Fill in the blanks (API keys, URLs, etc.).
+3. `docker-compose up -d`
+4. Sit back and watch the magic happen.
+
+---
+
 
 ## 📁 Project Structure
 
@@ -55,40 +87,62 @@ I also tweaked the prompts until they were just right. It's not perfect, but it 
 └── .env.example           # Environment variables template
 ```
 
-## 🚀 Getting Started (The Boring but Necessary Stuff)
+---
 
-### 1. The Hardware (ESP32-CAM + Bling)
 
-You'll need an ESP32-CAM and a WS2812B LED ring.
-Instead of the stock example, use the code in the `CameraWebServer` folder in this repo. It's got the special sauce for the LEDs. 🍝
+## ⚙️ Configuration
 
-1.  Open `CameraWebServer/CameraWebServer.ino` in Arduino IDE.
-2.  Update your WiFi creds.
-3.  Flash it!
-4.  Hook up your LED ring (check the code for pins).
+Edit `.env` to set your options:
 
-### 2. Home Assistant Setup
+- `GEMINI_API_KEY`: Get this from Google (free tier available)
+- `READING_INTERVAL_MINUTES`: How obsessed are you with your water usage?
 
-Create a helper so we have somewhere to put the numbers.
-**Settings** → **Devices & Services** → **Helpers** → **Create Helper** → **Number**.
-Call it `input_number.water_meter_reading`.
+---
 
-### 3. Docker (Because we love containers 🐳)
 
-1.  Copy the env file: `cp .env.example .env`
-2.  Fill in the blanks (API keys, URLs, etc.).
-3.  `docker-compose up -d`
-4.  Sit back and watch the magic happen.
+## 🤖 How it Works
 
-## � Config Stuff
+1. **Wakey Wakey**: The script runs every X minutes.
+2. **Sanity Check**: It grabs the *previous* reading from Home Assistant. This helps us spot bad readings (because water meters don't run backwards... usually). 🕵️‍♂️
+3. **Lights On**: It fires up the WS2812B LED ring (via the ESP32).
+4. **Say Cheese 📸**: Snaps a pic of the meter.
+5. **Lights Off**: Saves energy (and my eyes).
+6. **AI Brain**: Sends the pic to Google Gemini to figure out the numbers.
+7. **Home Assistant**: Dumps the data into HA so you can make pretty graphs. 📈
 
-Check `.env` for the knobs and dials you can turn.
-*   `GEMINI_API_KEY`: Get this from Google. It's free (mostly).
-*   `READING_INTERVAL_MINUTES`: How obsessed are you with your water usage?
+---
+
+
+## 📖 The Story (or "Why did I do this?")
+
+So, here's the tea ☕. I started this because I wanted to automate reading my water meter. My electricity meter is already digital and smart, but my water meter? Still stuck in the analog stone age (and probably will be for a while). 🦕
+
+My first big brain idea 🧠 was to just turn on the garage lights to see the meter. I hooked it up to Home Assistant (because why not? 😎), but imagine having your garage lights flickering on and off in the middle of the night just to check how much water you used... yeah, spooky and not ideal. 👻
+
+Next attempt: A simple LED. Result? A blinding beam of light and reflections everywhere. The camera couldn't see a thing! 🕶️
+
+**The Solution:**
+I ended up modifying the `CameraWebServer` source code to support a **WS2812B LED ring**. Now we get nice, even lighting without the disco ball effect. ✨
+(Check out the `CameraWebServer` folder in this repo for the modified code!)
+
+[Link to video coming soon!]
+
+---
+
+## 🧠 The AI Magic
+
+I spent *way* too much time testing different Gemini models.
+After battling with hallucinations and bad reads, I settled on **`gemini-2.5-flash-preview-09-2025`**.
+Right now, it's the king 👑 of reading these analog dials, with it also being completely free. But hey, AI moves fast, so this might change next week.
+
+I also tweaked the prompts until they were just right. It's not perfect, but it works like a charm for me!
+
+---
 
 ## 🤝 Contributing
 
-Got a better prompt? Found a cooler model? PRs are welcome! Let's make this thing even better.
+Got a better prompt? Found a cooler model? PRs are welcome! Let's make this thing even better. 🎉
 
 ---
+
 *Made with ❤️, milk, and a lot of trial and error.*
