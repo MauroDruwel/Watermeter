@@ -8,10 +8,10 @@
 <p align="center"><b>"I just want to know my usage" Edition 🚀</b></p>
 
 <p align="center">
-	<a href="#quickstart">Quickstart</a> |
-	<a href="#getting-started">Getting Started</a> |
-	<a href="#project-structure">Project Structure</a> |
-	<a href="#contributing">Contributing</a>
+	<a href="#-quick-install">Quickstart</a> |
+	<a href="#%EF%B8%8F-getting-started">Getting Started</a> |
+	<a href="#-project-structure">Project Structure</a> |
+	<a href="#-contributing">Contributing</a>
 </p>
 
 ---
@@ -39,8 +39,8 @@ docker-compose up -d
 
 ## Links
 
-- [Documentation](#getting-started)
-- [Contributing](#contributing)
+- [Documentation](#%EF%B8%8F-getting-started)
+- [Contributing](#-contributing)
 - [AI-on-the-edge-device (Inspiration)](https://github.com/jomjol/AI-on-the-edge-device)
 
 ---
