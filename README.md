@@ -24,14 +24,15 @@
 ## 📦 Quick Install
 
 ```sh
+# Clone the latest commit via this command, or download source using the button below ⬇️
 git clone https://github.com/MauroDruwel/Watermeter.git
 cd Watermeter
-copy .env.example .env  # On Windows, use 'copy', on Linux/Mac use 'cp'
+cp .env.example .env  # On Windows, use 'copy', instead of 'cp'
 # Fill in your .env with your API keys and config
 docker-compose up -d
 ```
 
-1. Flash your ESP32-CAM with the code in `CameraWebServer/` (see below)
+1. Flash your ESP32-CAM with the code in `CameraWebServer/` (via Arduino IDE)
 2. Create a Home Assistant helper: `input_number.water_meter_reading`
 3. Enjoy automatic water meter readings in Home Assistant! 💦
 
