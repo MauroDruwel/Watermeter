@@ -1,6 +1,13 @@
-FROM python:3.13-slim
+FROM python:3.14-slim
 
 WORKDIR /app
+
+# Install system build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    build-essential \
+    libffi-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 # Install dependencies
 COPY requirements.txt .
